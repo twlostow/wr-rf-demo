@@ -241,7 +241,7 @@ void adf4002_configure(struct wr_rf_device *dev, int r_div, int n_div, int mon_o
 
     adf4002_write(dev, 0 | (r_div << 2));
     adf4002_write(dev, 1 | (n_div << 8));
-    adf4002_write(dev, 2 | (0<<7) | ( mon_output << 4)); /* R div -> muxout */
+    adf4002_write(dev, 2 | (7<<15) | (7<<18) | (0<<7) | ( mon_output << 4)); /* R div -> muxout */
 }
 
 void ad9510_init(struct wr_rf_device *dev)
@@ -293,6 +293,80 @@ void modulation_test(struct wr_rf_device *dev)
     }
 }
 
+void boot_mdsp(struct wr_rf_device *dev, const char *mc_file)
+{
+    FILE *f=fopen(mc_file,"r");
+
+    uint64_t code[1024],opc;
+    int n = 0, i;
+
+    while(fscanf(f, "0x%llx\n", &opc) > 0)
+    {
+	code[n] = opc;
+	n++;
+    }
+
+    fclose(f);
+
+
+    rf_writel(dev, 1, 0x4000); // reset MDSP
+
+    for(i=0;i<n;i++)
+    {
+	rf_writel(dev, (code[i]>>32), 0x4000+(i*8 + 4) | (1<<11));
+        rf_writel(dev, (code[i]>>0), 0x4000+(i*8)  | (1<<11));
+    }
+
+    rf_writel(dev, 0, 0x4000); // reset MDSP
+             
+}
+
+void test_pid(struct wr_rf_device *dev)
+{
+    struct fir_filter *flt_comp = fir_load("fir_compensator.dat");
+    struct iir_1st *flt_loop = lowpass_init(2e3/(125e6/1024.0));
+
+    double kp = 0.001;
+    double ki = 0.000001;
+	int i;
+
+    rf_writel(dev, 2000, DDS_REG_GAIN);    /* tuning gain = 0 dB */
+
+    rf_writel(dev, DDS_CR_TEST, DDS_REG_CR);
+
+    int s;
+    for(i=0;i<10000;i++)
+	read_adc(dev, &s , 1);
+
+    double integ = 0.0;
+    
+    for(;;)
+    {
+        int s,err;
+        read_adc(dev, &s , 1);
+
+	s-=32768;
+	err = s;
+//	s*=-1;
+	integ += (double)err;
+	
+
+	s = (int) (integ * ki + (double) err * kp);
+	s = lowpass_process(flt_loop, s);
+	s = fir_process(flt_comp, s);
+
+//	printf("%d\n", s);
+
+	if(s < -32000) s = -32000;
+	else if (s > 32000) s = 32000;
+//	s = 30000;
+	write_tune(dev, s);
+//	printf("%d %d\n", s, err);
+
+    }
+
+}
+
 int main(int argc, char *argv[])
 {
     struct wr_rf_device dev;
@@ -320,9 +394,12 @@ int main(int argc, char *argv[])
     adf4002_configure(&dev, 2, 2, 4);
 
     struct fir_filter *flt_comp = fir_load("fir_compensator.dat");
-    struct iir_1st *flt_loop = lowpass_init(0.03);
+    struct iir_1st *flt_loop = lowpass_init(0.02);
 
-    rf_writel(&dev, 6000, DDS_REG_GAIN);    /* tuning gain = 0 dB */
+    rf_writel(&dev, 3000, DDS_REG_GAIN);    /* tuning gain = 0 dB */
+
+    test_pid(&dev);
+
 
 //for(;;)    write_tune(&dev, 15000);
 
@@ -342,6 +419,13 @@ int main(int argc, char *argv[])
 
     int i;
     int s;
+
+    rf_writel(&dev, DDS_CR_TEST, DDS_REG_CR);
+    boot_mdsp(&dev, "microcode.dat");
+    rf_writel(&dev, DDS_CR_MASTER, DDS_REG_CR);
+
+    return 0;
+
     for(i=0;i<10000;i++)
 	read_adc(&dev, &s , 1);
     
@@ -356,7 +440,7 @@ int main(int argc, char *argv[])
 	s = lowpass_process(flt_loop, s);
 	s = fir_process(flt_comp, s);
 
-	s/=25;
+	s/=24;
 
 //	printf("%d\n", s);
 
