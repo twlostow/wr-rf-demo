@@ -1,0 +1,351 @@
+-- -*- Mode: LUA; tab-width: 2 -*-
+
+peripheral {
+   name = "DDS RF distribution WB Slave";
+   hdl_entity = "dds_wb_slave";
+   prefix = "dds";
+
+   reg {
+      prefix = "CR";
+      name = "Control Register";
+
+      field {
+         name = "Enable DDS test mode";
+         prefix = "TEST";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = BIT;
+      };
+
+      field {
+         name = "Enable DDS RF slave mode";
+         prefix = "SLAVE";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = BIT;
+      };
+
+      field {
+         name = "Enable DDS RF master mode";
+         prefix = "MASTER";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = BIT;
+      };
+      
+      field {
+         name = "ADC Bitbanged Access Enable";
+         prefix = "ADC_BB_ENABLE";
+         type = MONOSTABLE;
+      };
+
+      field {
+         name = "Broadcast Clock ID";
+         description = "Send/Receive clocks matching given ID";
+         prefix = "CLK_ID";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = SLV;
+         size = 16;
+      };
+
+   };
+
+   reg {
+      prefix = "GPIOR";
+      name = "GPIO register";
+
+      field {
+         name = "System PLL CS";
+         prefix = "PLL_SYS_CS_N";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "System Reset";
+         prefix = "PLL_SYS_RESET_N";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "PLL SCLK (shared)";
+         prefix = "PLL_SCLK";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "PLL SDIO (shared)";
+         prefix = "PLL_SDIO";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_WRITE;
+         load = LOAD_EXT;
+      };
+
+      field {
+         name = "PLL SDIO direction (shared)";
+         prefix = "PLL_SDIO_DIR";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "VCXO PLL Reset";
+         prefix = "PLL_VCXO_RESET_N";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+ field {
+         name = "VCXO PLL Chip Select";
+         prefix = "PLL_VCXO_CS_N";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "VCXO PLL Function";
+         prefix = "PLL_VCXO_FUNCTION";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "VCXO PLL SDO";
+         prefix = "PLL_VCXO_SDO";
+         type = BIT;
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+      };
+
+      field {
+         name = "ADF4002 Chip Enable";
+         prefix = "ADF_CE";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+
+      };
+
+      field {
+         name = "ADF4002 Clock";
+         prefix = "ADF_CLK";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+
+      };
+
+      field {
+         name = "ADF4002 Latch Enable";
+         prefix = "ADF_LE";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+
+      };
+
+      field {
+         name = "ADF4002 Data";
+         prefix = "ADF_DATA";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+
+
+      field {
+         name = "AD7980 Bitbanged Data Out";
+         prefix = "ADC_SDI";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "AD7980 Bitbanged Convert Strobe";
+         prefix = "ADC_CNV";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "AD7980 Bitbanged Serial Clock";
+         prefix = "ADC_SCK";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+
+      field {
+         name = "AD7980 Bitbanged Data In";
+         prefix = "ADC_SDO";
+         type = BIT;
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+      };
+   };
+
+   fifo_reg {
+      name = "PD ADC Test FIFO (test mode)";
+      prefix = "PD_FIFO";
+      size = 512;
+      direction = CORE_TO_BUS;            
+      clock = "clk_ref_i";
+      flags_bus = { FIFO_EMPTY, FIFO_FULL };
+      flags_dev = { FIFO_EMPTY, FIFO_FULL };
+
+      field {
+         name = "ADC data";
+         prefix = "DATA";
+         size = 16;
+         type = SLV;
+      };
+   };
+
+   fifo_reg {
+      name = "DDS Tuning FIFO (test mode)";
+      prefix = "TUNE_FIFO";
+      size = 512;
+      flags_bus = { FIFO_EMPTY, FIFO_FULL };
+      flags_dev = { FIFO_EMPTY };
+      direction = BUS_TO_CORE;            
+      clock = "clk_ref_i";
+      field {
+         name = "DDS tune word";
+         prefix = "DATA";
+         size = 32;
+         type = SLV;
+      };
+   };
+
+   reg {
+      name = "DDS Center frequency hi";
+      prefix = "FREQ_HI";
+      field {
+         name = "Center freq HI";
+         size = 32;
+         type = SLV;
+         clock = "clk_ref_i";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };    
+   };
+
+   reg {
+      name = "DDS Center frequency lo";
+      prefix = "FREQ_LO";
+      field {
+         name = "Center freq LO";
+         size = 32;
+         type = SLV;
+         clock = "clk_ref_i";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         
+      };
+   };
+
+   reg {
+      name = "DDS Gain";
+      prefix = "GAIN";
+      field {
+         name = "DDS gain (4.12 unsigned)";
+         size = 16;
+         type = SLV;
+         clock = "clk_ref_i";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         
+      };
+   };
+
+   reg {
+      name = "Reset Register";
+      prefix = "RSTR";
+      field {
+         name = "FPGA REF/Serdes PLL Reset";
+         prefix = "PLL_RST";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         
+      };
+      field {
+         name = "FPGA DDS Logic software reset";
+         prefix = "SW_RST";
+         type = BIT;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         
+      };
+   };
+
+   reg {
+      name = "I2C bitbanged IO register";
+      prefix = "I2CR";
+      field {
+         name = "SCL Line out";
+         prefix = "SCL_OUT";
+         type = BIT;
+         reset_value = 1;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+      field {
+         name = "SDA Line out";
+         prefix = "SDA_OUT";
+         type = BIT;
+         reset_value = 1;
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+      };
+      field {
+         name = "SCL Line in";
+         prefix = "SCL_IN";
+         type = BIT;
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+      };
+      field {
+         name = "SDA Line in";
+         prefix = "SDA_IN";
+         type = BIT;
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+      };
+   };
+
+   reg {
+      name = "PI register";
+      prefix = "PIR";
+      field {
+         name = "KP";
+         prefix = "KP";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = SLV;
+         size = 16;
+      };
+      field {
+         name = "KI";
+         prefix = "KI";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = SLV;
+         size = 16;
+      };
+   };
+};

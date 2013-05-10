@@ -1,0 +1,111 @@
+
+#
+# Mezzanine top level pin assignment file:
+# syntax: pin FMC_pin_name Core_Pin_name IO_Standard
+# % is replaced with FMC number if the carrier supports more than 1 mezzanine
+#
+
+mezzanine fmc-dds-600m
+
+pin la_n2 dds%_dac_n_o[11] lvds_25
+pin la_p2 dds%_dac_p_o[11] lvds_25
+pin la_n4 dds%_dac_n_o[9] lvds_25
+pin la_p4 dds%_dac_p_o[9] lvds_25
+pin la_n7 dds%_dac_n_o[6] lvds_25
+pin la_p7 dds%_dac_p_o[6] lvds_25
+pin la_n11 dds%_dac_n_o[3] lvds_25
+pin la_p11 dds%_dac_p_o[3] lvds_25
+pin la_n15 dds%_dac_n_o[0] lvds_25
+pin la_p15 dds%_dac_p_o[0] lvds_25
+
+pin la_p14 dds%_pll_sys_sync_n_o lvcmos25
+pin la_n14 dds%_pd_ce_o lvcmos25
+
+
+pin la_p19 dds%_pll_sys_refmon_i lvcmos25
+pin la_n19 dds%_pll_sys_ld_i lvcmos25
+
+pin la_p21 dds%_pll_vcxo_sdo_i lvcmos25
+pin la_n21 dds%_pll_sys_reset_n_o lvcmos25
+
+pin la_p24 dds%_adc_sdo_i lvcmos25
+pin la_n24 dds%_adc_sck_o lvcmos25
+
+pin la_p28 dds%_wr_dac_sclk_o lvcmos25
+pin la_n28 dds%_pll_vcxo_cs_n_o lvcmos25
+
+pin la_p30 dds%_pll_vcxo_function_o lvcmos25
+pin la_n30 dds%_si57x_oe_o lvcmos25
+
+pin la_p32 dds%_pll_vcxo_status_i lvcmos25
+pin la_n32 dds%_onewire_b lvcmos25
+
+#pin clk1m2c_n dds%_wr_ref_clk_n_i lvds_25
+#pin clk1m2c_p dds%_wr_ref_clk_p_i lvds_25
+
+pin la_n0 dds%_wr_ref_clk_n_i lvds_25
+pin la_p0 dds%_wr_ref_clk_p_i lvds_25
+
+pin la_p3 dds%_dac_p_o[10] lvds_25
+pin la_n3 dds%_dac_n_o[10] lvds_25
+
+pin la_p8 dds%_dac_p_o[7] lvds_25
+pin la_n8 dds%_dac_n_o[7] lvds_25
+
+pin la_p12 dds%_dac_p_o[4] lvds_25
+pin la_n12 dds%_dac_n_o[4] lvds_25
+
+pin la_p16 dds%_dac_p_o[1] lvds_25
+pin la_n16 dds%_dac_n_o[1] lvds_25
+
+pin la_p20 dds%_trig_term_en_o lvcmos25
+pin la_n20 dds%_pll_sys_status_i lvcmos25
+
+pin la_p22 dds%_pll_sclk_o lvcmos25
+pin la_n22 dds%_pll_sdio_b lvcmos25
+
+pin la_p25 dds%_adc_cnv_o lvcmos25
+pin la_n25 dds%_adc_sdi_o lvcmos25
+
+pin la_p29 dds%_wr_dac_din_o lvcmos25
+pin la_n29 dds%_wr_dac_sync_n_o lvcmos25
+
+pin la_n31 dds%_si57x_sda_b lvcmos25
+
+pin la_p33 dds%_si57x_scl_b lvcmos25
+
+
+pin la_p1 dds%_dac_p_o[13] lvds_25
+pin la_n1 dds%_dac_n_o[13] lvds_25
+
+pin la_p5 dds%_dac_p_o[8] lvds_25
+pin la_n5 dds%_dac_n_o[8] lvds_25
+
+pin la_p9 dds%_dac_p_o[5] lvds_25
+pin la_n9 dds%_dac_n_o[5] lvds_25
+
+pin la_p13 dds%_dac_p_o[2] lvds_25
+pin la_n13 dds%_dac_n_o[2] lvds_25
+
+pin la_n17 dds%_dac_pwdn_o lvcmos25
+
+pin la_p23 dds%_pd_lockdet_i lvcmos25
+pin la_n23 dds%_pd_clk_o lvcmos25
+
+pin la_p26 dds%_pll_sys_cs_n_o lvcmos25
+# pin la_n26 dds%_filter_clk_o lvcmos25
+
+pin la_p6 dds%_dac_p_o[12] lvds_25
+pin la_n6 dds%_dac_n_o[12] lvds_25
+
+pin la_p10 dds%_trig_dir_o lvcmos25
+pin la_n10 dds%_trig_act_o lvcmos25
+
+#pin la_p18 dds_trig_p_b lvds_25
+#pin la_n18 dds_trig_n_b lvds_25
+
+pin la_p27 dds_pd_data_b lvcmos25
+pin la_n27 dds_pd_le_o lvcmos25
+
+
+#eof

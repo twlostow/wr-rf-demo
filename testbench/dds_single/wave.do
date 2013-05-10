@@ -1,55 +1,61 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
-add wave -noupdate /main/DUT/g_acc_frac_bits
-add wave -noupdate /main/DUT/g_dither_init_value
-add wave -noupdate /main/DUT/g_output_bits
-add wave -noupdate /main/DUT/g_lut_sample_bits
-add wave -noupdate /main/DUT/g_lut_slope_bits
-add wave -noupdate /main/DUT/g_interp_shift
-add wave -noupdate /main/DUT/g_lut_size_log2
-add wave -noupdate /main/DUT/c_acc_bits
-add wave -noupdate /main/DUT/c_output_shift
-add wave -noupdate /main/DUT/clk_i
-add wave -noupdate /main/DUT/rst_n_i
-add wave -noupdate /main/DUT/acc_load_i
-add wave -noupdate /main/DUT/tune_load_i
-add wave -noupdate /main/DUT/acc_i
-add wave -noupdate /main/DUT/tune_i
-add wave -noupdate /main/DUT/dreq_i
-add wave -noupdate -format Analog-Step -height 100 -max 2048.0 -min -2048.0 /main/DUT/y_o
-add wave -noupdate -format Analog-Step -height 50 -max 1000.0 -min -1000.0 -radix decimal /main/DUT/interp
-add wave -noupdate /main/DUT/lut_addr_o
-add wave -noupdate /main/DUT/lut_data_i
-add wave -noupdate /main/DUT/acc0
-add wave -noupdate /main/DUT/acc1
-add wave -noupdate /main/DUT/tune
-add wave -noupdate /main/DUT/phase
-add wave -noupdate /main/DUT/frac
-add wave -noupdate /main/DUT/half
-add wave -noupdate /main/DUT/addr0
-add wave -noupdate /main/DUT/addr1
-add wave -noupdate /main/DUT/tmp
-add wave -noupdate /main/DUT/tmp2
-add wave -noupdate /main/DUT/sign
-add wave -noupdate /main/DUT/lut_in
-add wave -noupdate /main/DUT/lut_slope
-add wave -noupdate -radix decimal /main/DUT/lut_sample
-add wave -noupdate -radix decimal /main/DUT/qv
-add wave -noupdate /main/DUT/interp_mul
-add wave -noupdate /main/DUT/clk_i
-add wave -noupdate /main/DUT/rst_n_i
-add wave -noupdate /main/DUT/acc_load_i
-add wave -noupdate /main/DUT/tune_load_i
-add wave -noupdate /main/DUT/acc_i
-add wave -noupdate /main/DUT/tune_i
-add wave -noupdate /main/DUT/dreq_i
-add wave -noupdate -format Analog-Step -height 100 -max 2048.0 -min -2048.0 /main/DUT/y_o
-add wave -noupdate /main/DUT/dither_in
-add wave -noupdate /main/DUT/lfsr
-add wave -noupdate /main/DUT/lut_addr_o
-add wave -noupdate /main/DUT/lut_data_i
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_acc_frac_bits}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_dither_init_value}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_output_bits}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_lut_sample_bits}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_lut_slope_bits}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_interp_shift}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_lut_size_log2}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_dither_taps}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/g_dither_length}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/c_dither_bits}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/c_acc_bits}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/c_output_shift}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/dither_in}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/clk_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/rst_n_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/acc_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/dreq_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/y_o}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/lut_addr_o}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/lut_data_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/acc0}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/acc1}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/tune}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/phase}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/frac}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/frac_d0}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/frac_d1}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/frac_d2}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/frac_d3}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/half}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/addr0}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/addr1}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/tmp}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/tmp2}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/tmp3}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/sign}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/lut_in}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/lut_slope}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/slope_d0}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/lut_sample}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/sample_d0}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/interp}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/interp_d0}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/qv}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/yt}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/interp_mul}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/lfsr}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/clk_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/rst_n_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/acc_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/dreq_i}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/y_o}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/lut_addr_o}
+add wave -noupdate {/main/DUT/genblk1[0]/U_Stage_X/lut_data_i}
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {19833 ps} 0}
+WaveRestoreCursors {{Cursor 1} {25426 ps} 0}
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100
 configure wave -justifyvalue left
@@ -64,4 +70,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {6845 ps} {33095 ps}
+WaveRestoreZoom {0 ps} {210 ns}

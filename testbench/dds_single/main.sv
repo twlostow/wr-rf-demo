@@ -9,19 +9,12 @@ module main;
    reg clk = 0;
    reg rst_n = 0;
 
-   reg [g_lut_sample_bits + g_lut_slope_bits-1:0] lut_data;
-   wire [g_lut_size_log2-1:0] lut_addr;
+   wire [13:0]                                y0, y1, y2 ,y3;
 
-
-   reg [g_lut_sample_bits + g_lut_slope_bits-1:0]    lut[0:2**g_lut_size_log2-1];
-
-   wire signed [13:0]                                y;
+   reg [43:0]                                        tune;
    
    
-   always@(posedge clk)
-     lut_data <= lut[lut_addr];
-   
-   dds_single_channel #(
+   dds_quad_channel #(
                        .g_lut_sample_bits   (g_lut_sample_bits),
                        .g_lut_slope_bits   (g_lut_slope_bits),
                        .g_lut_size_log2 (g_lut_size_log2),
@@ -32,17 +25,18 @@ module main;
            .rst_n_i (rst_n),
 
            .acc_i   (44'h0),
-           .tune_i  (44'd100000000000),
+           .tune_i  (tune),
 
            .acc_load_i (1'b0),
            .tune_load_i(1'b1),
            .dreq_i(1'b1),
 //           #y_o    : out std_logic_vector(g_sample_bits-1 downto 0);
 
-           .lut_addr_o (lut_addr),
-           .lut_data_i (lut_data),
-           .y_o(y)
-           
+     
+           .y0_o(y0),
+           .y1_o(y1),
+           .y2_o(y2),
+           .y3_o(y3)
     );
 
 
@@ -55,10 +49,11 @@ module main;
       int  i, lut_size;
 
       lut_size = 2**g_lut_size_log2;
-      
-//      tune = 44'd100000000000;
- //int'(real'(2**g_frac_bits) * real'(2**g_lut_size_log2) / fout / fs * 4.0);
 
+    //  tune = int'(real'(2**32) * real'(2**g_lut_size_log2) / fout / fs * 2.0);
+      tune = 44'd1000000000000;
+      
+      
       for (i=0;i<lut_size;i++)
         begin
            real y0,y1,ampl;
@@ -76,7 +71,8 @@ module main;
            lv [g_lut_sample_bits+g_lut_slope_bits-1:g_lut_sample_bits] = int' ((y1-y0) * 128.0);
            
            
-           lut[i] = lv;
+         //  DUT.lut01[i] = lv;
+         //  DUT.lut23[i] = lv;
 
         end
       
@@ -110,7 +106,7 @@ module main;
              
              l_count <= l_count + 1;
              
-             $sformat(s, "%d\n", int'(y));
+             $sformat(s, "%d\n%d\n%d\n%d\n", int'(y0),int'(y1),int'(y2),int'(y3));
              $fwrite(f_out, s);
              
              
