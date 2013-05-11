@@ -324,37 +324,62 @@ void boot_mdsp(struct wr_rf_device *dev, const char *mc_file)
 void test_pid(struct wr_rf_device *dev)
 {
     struct fir_filter *flt_comp = fir_load("fir_compensator.dat");
-    struct iir_1st *flt_loop = lowpass_init(2e3/(125e6/1024.0));
+    struct iir_1st *flt_loop = lowpass_init(1000.0/(125e6/1024.0));
 
-    double kp = 0.001;
+    double kp = 0.002;
     double ki = 0.000001;
-	int i;
+    int i;
+
 
     rf_writel(dev, 2000, DDS_REG_GAIN);    /* tuning gain = 0 dB */
 
     rf_writel(dev, DDS_CR_TEST, DDS_REG_CR);
 
+
     int s;
-    for(i=0;i<10000;i++)
-	read_adc(dev, &s , 1);
 
     double integ = 0.0;
+
+
+    int ki_q = (int) ((1024.0 * ki) * (double)(1<<16));
+    int kp_q = (int) ((1.0 * kp) * (double)(1<<16));
+
+//    printf("ki_q %d kp_q %d\n", ki_q, kp_q);
+
+    #define ACC_BITS 30
+
+    int64_t acc = 0;
+    for(i=0;i<100000;i++)
+	read_adc(dev, &s , 1);
     
     for(;;)
     {
         int s,err;
         read_adc(dev, &s , 1);
 
+//	s = lowpass_process(flt_loop, s);
+
 	s-=32768;
 	err = s;
 //	s*=-1;
-	integ += (double)err;
+//	integ += (double)err;
+
+	acc += err >> 10;
+	acc &= (1<<ACC_BITS) - 1;
+
+	if(acc & (1<<(ACC_BITS-1)))
+	    acc |= ~((1<<ACC_BITS)-1);
+
+
+	s = ((int64_t)(acc) * (int64_t) ki_q + (int64_t)err * (int64_t)kp_q) >> 16;
+
+	
 	
 
-	s = (int) (integ * ki + (double) err * kp);
-	s = lowpass_process(flt_loop, s);
-	s = fir_process(flt_comp, s);
+//	s = (int) (integ * ki + (double) err * kp);
+//	s = fir_process(flt_comp, s);
 
+//	integ *= 0.999999;
 //	printf("%d\n", s);
 
 	if(s < -32000) s = -32000;
@@ -396,9 +421,9 @@ int main(int argc, char *argv[])
     struct fir_filter *flt_comp = fir_load("fir_compensator.dat");
     struct iir_1st *flt_loop = lowpass_init(0.02);
 
-    rf_writel(&dev, 3000, DDS_REG_GAIN);    /* tuning gain = 0 dB */
 
-    test_pid(&dev);
+//    test_pid(&dev);
+//    test_pid2(&dev);
 
 
 //for(;;)    write_tune(&dev, 15000);
@@ -420,9 +445,25 @@ int main(int argc, char *argv[])
     int i;
     int s;
 
+    rf_writel(&dev, 3000, DDS_REG_GAIN);    /* tuning gain = 0 dB */
     rf_writel(&dev, DDS_CR_TEST, DDS_REG_CR);
-    boot_mdsp(&dev, "microcode.dat");
+//    rf_writel(dev, 2000, DDS_REG_GAIN);    /* tuning gain = 0 dB */
+
+    double kp = 0.05;
+    double ki = 0.0000005;
+
+    int ki_q = (int) ((1024.0 * ki) * (double)(1<<16));
+    int kp_q = (int) ((1.0 * kp) * (double)(1<<16));
+
+    printf("kp_q %d ki_q %d\n", kp_q, ki_q);
+
+//    boot_mdsp(&dev, "microcode.dat");
+    rf_writel(&dev, DDS_RSTR_SW_RST, DDS_REG_RSTR);
+    udelay(10);
+    rf_writel(&dev, 0, DDS_REG_RSTR);
+    rf_writel(&dev, DDS_PIR_KI_W(ki_q) | DDS_PIR_KP_W(kp_q), DDS_REG_PIR);
     rf_writel(&dev, DDS_CR_MASTER, DDS_REG_CR);
+
 
     return 0;
 
