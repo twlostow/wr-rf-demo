@@ -64,7 +64,30 @@ class CDDSCore;
       writel('h4000, 0); // un-reset 
 
    endtask // boot_mdsp
+
+
+   task enable_master(int bcid);
+      int ki_q = 100;
+      int kp_q = 1000;
+
+      writel(`ADDR_DDS_MACH, 'hffff);
+      writel(`ADDR_DDS_MACL, 'hffffffff);
+      
+      
+      writel(`ADDR_DDS_PIR, (ki_q << 16) | (kp_q));
+      writel(`ADDR_DDS_CR, `DDS_CR_MASTER |( bcid << `DDS_CR_CLK_ID_OFFSET));
+   endtask // master
    
+
+   task enable_slave(int bcid);
+      writel(`ADDR_DDS_MACH, 'hffff);
+      writel(`ADDR_DDS_MACL, 'hffffffff);
+
+      writel(`ADDR_DDS_CR, `DDS_CR_SLAVE |( bcid << `DDS_CR_CLK_ID_OFFSET));
+      writel(`ADDR_DDS_DLYR, 1000);
+   endtask // master
+   
+      
        
    
   
@@ -79,17 +102,22 @@ module main;
    always #4ns clk_wr_ref <= ~clk_wr_ref;
    always #20ns clk_20m_vcxo <= ~clk_20m_vcxo;
    
-   IGN4124PCIMaster I_Gennum ();
+   IGN4124PCIMaster I_GennumA ();
+   IGN4124PCIMaster I_GennumB ();
 
    wire [13:0] dac_p;
    
 `include "../mdsp/dsp_microcode.sv"
 
+   wire        a2b_p, a2b_n, b2a_p, b2a_n;
+   
+   
    spec_top
      #(
-       .g_simulation(1)
+       .g_simulation(1),
+       .g_bypass_wrcore(0)
        )
-     DUT
+     DUT_A
  (
   .clk_20m_vcxo_i(clk_20m_vcxo),
 
@@ -97,13 +125,43 @@ module main;
   .dds_wr_ref_clk_n_i(~clk_wr_ref),
 
   .dds_adc_sdo_i(1'b0),
-  
   .dds_dac_p_o(dac_p),
+
+  .sfp_txp_o(a2b_p),
+  .sfp_txn_o(a2b_n),
+
+  .sfp_rxp_i(b2a_p),
+  .sfp_rxn_i(b2a_n),
   
-  `GENNUM_WIRE_SPEC_PINS(I_Gennum)
+  `GENNUM_WIRE_SPEC_PINS(I_GennumA)
   );
 
-      const real kp = 0.002;
+   spec_top
+     #(
+       .g_simulation(1),
+       .g_bypass_wrcore(0)
+       )
+     DUT_B
+ (
+  .clk_20m_vcxo_i(clk_20m_vcxo),
+
+  .dds_wr_ref_clk_p_i(clk_wr_ref),
+  .dds_wr_ref_clk_n_i(~clk_wr_ref),
+
+  .dds_adc_sdo_i(1'b0),
+  .dds_dac_p_o(dac_p),
+
+  .sfp_txp_o(b2a_p),
+  .sfp_txn_o(b2a_n),
+
+  .sfp_rxp_i(a2b_p),
+  .sfp_rxn_i(a2b_n),
+  
+  
+  `GENNUM_WIRE_SPEC_PINS(I_GennumB)
+  );
+
+   const real kp = 0.002;
    const real ki = 0.000001;
 
    const int  kp_q = 100;
@@ -116,78 +174,49 @@ module main;
        int i;
 
        
-      CBusAccessor acc ;
-      CDDSCore dds;
+      CBusAccessor acc_a, acc_b ;
+      CDDSCore dds_a;
+      CDDSCore dds_b;
        
-      acc = I_Gennum.get_accessor();
-      @(posedge I_Gennum.ready);
+      acc_a = I_GennumA.get_accessor();
+      acc_b = I_GennumB.get_accessor();
+      @(posedge I_GennumA.ready);
 
 
-      acc.read(0, rval);
-      $display("Startup: SDB signature = 0x%08x", rval);
-       acc.write(BASE_DDS + `ADDR_DDS_RSTR, `DDS_RSTR_SW_RST);
-       acc.write(BASE_DDS + `ADDR_DDS_RSTR, 0);
-       dds = new(acc, BASE_DDS);
+       acc_a.read(0, rval);
+       $display("Startup: A SDB signature = 0x%08x", rval);
+       acc_b.read(0, rval);
+       $display("Startup: B SDB signature = 0x%08x", rval);
+       acc_a.write(BASE_DDS + `ADDR_DDS_RSTR, `DDS_RSTR_SW_RST);
+       acc_a.write(BASE_DDS + `ADDR_DDS_RSTR, 0);
+       acc_b.write(BASE_DDS + `ADDR_DDS_RSTR, `DDS_RSTR_SW_RST);
+       acc_b.write(BASE_DDS + `ADDR_DDS_RSTR, 0);
 
+       dds_a = new(acc_a, BASE_DDS);
+       dds_b = new(acc_b, BASE_DDS);
 
-       dds.set_center_frequency(10e6, 250e6);
+       dds_a.set_center_frequency(10e6, 250e6);
+       dds_b.set_center_frequency(10e6, 250e6);
 
-       //dds.boot_mdsp(code);
-
-       acc.write(BASE_DDS + `ADDR_DDS_PIR, (ki_q << 16) | (kp_q));
-
-       dds.writel(`ADDR_DDS_CR, `DDS_CR_MASTER);
-       
-       
-/*       for(i=0;i<30;i++)
-         dds.tune_write(-10000);
-       for(i=0;i<30;i++)
-         dds.tune_write(10000);
-       for(i=0;i<30;i++)
-         dds.tune_write(0);*/
-       
+       dds_a.enable_master(11);
+       dds_b.enable_slave(11);
        
       
-   end
-   
-   int                                                    s_count = 0, l_count = 0;
-   integer                                                    f_out;
-   
+    end // initial begin
 
-   initial begin
-      f_out = $fopen("/tmp/dds-hw.dat","w");
-      $display("File opened, handle %d", f_out);
-      
-   end
-   
-   always@(posedge DUT.clk_ref)
-     begin
-        
-        s_count <= s_count + 1;
+/*   assign DUT_B.wrc_src_out_cyc =  DUT_A.wrc_snk_in_cyc;
+   assign DUT_B.wrc_src_out_stb =  DUT_A.wrc_snk_in_stb;
+   assign DUT_B.wrc_src_out_we =  DUT_A.wrc_snk_in_we;
+   assign DUT_B.wrc_src_out_adr = DUT_A.wrc_snk_in_adr;
+   assign DUT_B.wrc_src_out_dat = DUT_A.wrc_snk_in_dat;
+   assign DUT_B.wrc_src_out_sel = DUT_A.wrc_snk_in_sel;
 
-        if(s_count > 10000)
-          begin
-             string s;
-             
-             l_count <= l_count + 1;
-             
-             $sformat(s, "%d\n", dac_p);
-             $fwrite(f_out, s);
-             
-             
-             if(l_count == 262144)
-               begin
-                  $fclose(f_out);
-                  $stop;
-               end
-             
-             
-             
-          end
-        
-        
-     end
+   assign DUT_A.wrc_snk_out_ack =  DUT_B.wrc_src_in_ack;
+   assign DUT_A.wrc_snk_out_stall = DUT_B.wrc_src_in_stall;
+   assign DUT_A.wrc_snk_out_err =  DUT_B.wrc_src_in_err;
+   assign DUT_A.wrc_snk_out_rty =  DUT_B.wrc_src_in_rty;
+  */ 
    
-   
+ 
 endmodule // main
 

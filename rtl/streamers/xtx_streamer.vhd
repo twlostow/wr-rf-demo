@@ -179,7 +179,7 @@ architecture rtl of xtx_streamer is
 
   type t_tx_state is (IDLE, SOF, ETH_HEADER, SUBFRAME_HEADER, PAYLOAD, CRC_WORD, PADDING, EOF);
 
-  constant c_min_packet_size : integer := 32;
+  constant c_min_packet_size : integer := 30;
 
   signal tx_threshold_hit : std_logic;
   signal tx_timeout_hit   : std_logic;

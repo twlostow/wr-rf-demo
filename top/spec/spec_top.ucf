@@ -181,33 +181,32 @@ NET "carrier_onewire_b" LOC = D4;
 NET "carrier_onewire_b" IOSTANDARD = "LVCMOS25";
 NET "fmc_PRSNT_M2C_L_i" LOC="AB14";
 
-#NET "sfp_rxp_i" LOC= D15;
-#NET "sfp_rxn_i" LOC= C15;
-#NET "sfp_txp_o" LOC= B16;
-#NET "sfp_txn_o" LOC= A16;
-#NET "SFP_MOD_DEF1_b" LOC = C17;
-#NET "SFP_MOD_DEF1_b" IOSTANDARD = "LVCMOS25";
-#NET "SFP_MOD_DEF0_b" LOC = G15;
-#NET "SFP_MOD_DEF0_b" IOSTANDARD = "LVCMOS25";
-#NET "SFP_MOD_DEF2_b" LOC = G16;
-#NET "SFP_MOD_DEF2_b" IOSTANDARD = "LVCMOS25";
-#NET "SFP_RATE_SELECT_b" LOC = H14;
-#NET "SFP_RATE_SELECT_b" IOSTANDARD = "LVCMOS25";
-#NET "SFP_TX_FAULT_i" LOC = A17;
-#NET "SFP_TX_FAULT_i" IOSTANDARD = "LVCMOS25";
-#NET "SFP_TX_DISABLE_o" LOC = F17;
-#NET "SFP_TX_DISABLE_o" IOSTANDARD = "LVCMOS25";
-#NET "SFP_LOS_i" LOC = D18;
-#NET "SFP_LOS_i" IOSTANDARD = "LVCMOS25";
+NET "sfp_rxp_i" LOC= D15;
+NET "sfp_rxn_i" LOC= C15;
+NET "sfp_txp_o" LOC= B16;
+NET "sfp_txn_o" LOC= A16;
+NET "SFP_MOD_DEF1_b" LOC = C17;
+NET "SFP_MOD_DEF1_b" IOSTANDARD = "LVCMOS25";
+NET "SFP_MOD_DEF0_b" LOC = G15;
+NET "SFP_MOD_DEF0_b" IOSTANDARD = "LVCMOS25";
+NET "SFP_MOD_DEF2_b" LOC = G16;
+NET "SFP_MOD_DEF2_b" IOSTANDARD = "LVCMOS25";
+NET "SFP_RATE_SELECT_b" LOC = H14;
+NET "SFP_RATE_SELECT_b" IOSTANDARD = "LVCMOS25";
+NET "SFP_TX_FAULT_i" LOC = A17;
+NET "SFP_TX_FAULT_i" IOSTANDARD = "LVCMOS25";
+NET "SFP_TX_DISABLE_o" LOC = F17;
+NET "SFP_TX_DISABLE_o" IOSTANDARD = "LVCMOS25";
+NET "SFP_LOS_i" LOC = D18;
+NET "SFP_LOS_i" IOSTANDARD = "LVCMOS25";
 ####################################################################################
 # Misc
 ####################################################################################
-#NET "uart_rxd_i" LOC= A2;
-#NET "uart_rxd_i" IOSTANDARD=LVCMOS25;
-#NET "uart_txd_o" LOC= B2;
-#NET "uart_txd_o" IOSTANDARD=LVCMOS25;
+NET "uart_rxd_i" LOC= A2;
+NET "uart_rxd_i" IOSTANDARD=LVCMOS25;
+NET "uart_txd_o" LOC= B2;
+NET "uart_txd_o" IOSTANDARD=LVCMOS25;
 #bank 0
-
 
 
 
@@ -349,14 +348,17 @@ TIMESPEC TS_dds_wr_ref_clk_n_i = PERIOD "dds_wr_ref_clk_n_i" 8 ns HIGH 50%;
 NET "dds_wr_ref_clk_p_i" TNM_NET = dds_wr_ref_clk_p_i;
 TIMESPEC TS_dds_wr_ref_clk_p_i = PERIOD "dds_wr_ref_clk_p_i" 8 ns HIGH 50%;
 
+TIMESPEC ts_ignore_xclock1 = FROM "clk_dmtd" TO "wr_ref_clk_p_i" 10ns DATAPATHONLY;
+TIMESPEC ts_ignore_xclock2 = FROM "wr_ref_clk_p_i" TO "clk_dmtd" 10ns DATAPATHONLY;
 
-
+#Created by Constraints Editor (xc6slx45t-fgg484-3) - 2012/04/26
+TIMESPEC ts_x3 = FROM "clk_dmtd" TO "U_GTP_ch1_rx_divclk" 10ns DATAPATHONLY;
+TIMESPEC TS_x4 = FROM "U_GTP_ch1_rx_divclk" TO "clk_dmtd" 10ns DATAPATHONLY;
+#Created by Constraints Editor (xc6slx45t-fgg484-3) - 2012/04/27
 #===============================================================================
 # Timing constraints
 #===============================================================================
-
 # GN4124
-
 
 #gennum
 NET "l_rst_n" TIG;
@@ -396,7 +398,6 @@ NET "L2P_DATA[14]" TNM = "gn4124_data_bus_out";
 NET "L2P_DATA[15]" TNM = "gn4124_data_bus_out";
 
 #TIMEGRP "gn4124_data_bus_out" OFFSET = OUT AFTER "cmp_gn4124_core/io_clk" REFERENCE_PIN "L2P_CLKP";
-
 NET "P2L_CLKN" TNM = "gn4124_data_bus_in";
 NET "P2L_CLKP" TNM = "gn4124_data_bus_in";
 NET "P2L_DFRAME" TNM = "gn4124_data_bus_in";
@@ -420,3 +421,7 @@ NET "P2L_DATA[15]" TNM = "gn4124_data_bus_in";
 
 #TIMEGRP "gn4124_data_bus_in" OFFSET = IN 1.2 ns VALID 1.6 ns BEFORE "cmp_gn4124_core/io_clk" RISING;
 #TIMEGRP "gn4124_data_bus_in" OFFSET = IN 1.2 ns VALID 1.6 ns BEFORE "cmp_gn4124_core/io_clk" FALLING;
+#Created by Constraints Editor (xc6slx45t-fgg484-3) - 2013/05/10
+NET "U_GTP/ch1_gtp_clkout_int<1>" TNM_NET = U_GTP/ch1_gtp_clkout_int<1>;
+TIMESPEC TS_U_GTP_ch1_gtp_clkout_int_1_ = PERIOD "U_GTP/ch1_gtp_clkout_int<1>" 8 ns HIGH 50%;
+TIMESPEC TS_cmp_gn4124_core_cmp_clk_in_P_clk = PERIOD "cmp_gn4124_core/cmp_clk_in/P_clk" 5 ns HIGH 50%;

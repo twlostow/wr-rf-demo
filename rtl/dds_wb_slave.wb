@@ -40,12 +40,30 @@ peripheral {
       };
 
       field {
+         name = "WR Link status";
+         prefix = "WR_LINK";
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+         type = BIT;
+      };
+
+      field {
+         name = "WR Time status";
+         prefix = "WR_TIME";
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+         type = BIT;
+      };
+
+
+      field {
          name = "Broadcast Clock ID";
          description = "Send/Receive clocks matching given ID";
          prefix = "CLK_ID";
          access_bus = READ_WRITE;
          access_dev = READ_ONLY;
          type = SLV;
+         align = 16;
          size = 16;
       };
 
@@ -348,4 +366,112 @@ peripheral {
          size = 16;
       };
    };
+
+   reg {
+      name = "Delay Adjust Register";
+      prefix = "DLYR";
+      field {
+         name = "Delay";
+         prefix = "DELAY";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = SLV;
+         size = 16;
+      };
+   };
+
+   reg {
+   name = "Phase Shift Adjust Register";
+      prefix = "PHASER";
+      field {
+         name = "PHASE";
+         prefix = "PHASE";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = SLV;
+         size = 16;
+      };
+   };
+
+   reg {
+      name = "MAC Lo reg";
+      prefix = "MACL";
+      field {
+         name = "MACL";
+         prefix = "MACL";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = SLV;
+         size = 32;
+      };
+   };
+
+   reg {
+      name = "MAC Hi reg";
+      prefix = "MACH";
+      field {
+         name = "MACH";
+         prefix = "MACH";
+         access_bus = READ_WRITE;
+         access_dev = READ_ONLY;
+         type = SLV;
+         size = 16;
+      };
+   };
+
+   reg {
+      name = "Hit Count Reg";
+      prefix = "HIT_CNT";
+      field {
+         clock = "clk_ref_i";
+         name = "HIT_CNT";
+         prefix = "HIT_CNT";
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+         type = SLV;
+         size = 24;
+      };
+   };
+
+   reg {
+      name = "Miss Count Reg";
+      prefix = "MISS_CNT";
+      field {
+         clock = "clk_ref_i";
+         name = "MISS_CNT";
+         prefix = "MISS_CNT";
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+         type = SLV;
+         size = 24;
+      };
+   };
+
+   reg {
+      name = "RX Count Reg";
+      prefix = "RX_CNT";
+      field {
+         name = "RX_CNT";
+         prefix = "RX_CNT";
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+         type = SLV;
+         size = 24;
+      };
+   };
+
+  reg {
+      name = "TX Count Reg";
+      prefix = "TX_CNT";
+      field {
+         name = "TX_CNT";
+         prefix = "TX_CNT";
+         access_bus = READ_ONLY;
+         access_dev = WRITE_ONLY;
+         type = SLV;
+         size = 24;
+      };
+   };
+
+
 };

@@ -21,6 +21,7 @@ entity dds_core is
     rst_n_i   : in std_logic;
 
     -- Timing (WRC)
+    tm_link_up_i    : in std_logic := '1';
     tm_time_valid_i : in std_logic;
     tm_tai_i        : in std_logic_vector(39 downto 0);
     tm_cycles_i     : in std_logic_vector(27 downto 0);
@@ -110,7 +111,7 @@ architecture behavioral of dds_core is
     port (
       rst_n_i    : in  std_logic;
       clk_sys_i  : in  std_logic;
-      wb_adr_i   : in  std_logic_vector(3 downto 0);
+      wb_adr_i   : in  std_logic_vector(4 downto 0);
       wb_dat_i   : in  std_logic_vector(31 downto 0);
       wb_dat_o   : out std_logic_vector(31 downto 0);
       wb_cyc_i   : in  std_logic;
@@ -189,6 +190,47 @@ architecture behavioral of dds_core is
       );
   end component;
 
+  component dds_tx_path
+    generic (
+      g_acc_bits : integer := 43);
+    port (
+      clk_sys_i       : in  std_logic;
+      clk_ref_i       : in  std_logic;
+      rst_n_sys_i     : in  std_logic;
+      rst_n_ref_i     : in  std_logic;
+      tune_i          : in  std_logic_vector(17 downto 0);
+      cic_ce_i        : in  std_logic;
+      acc_i           : in  std_logic_vector(g_acc_bits-1 downto 0);
+      src_i           : in  t_wrf_source_in;
+      src_o           : out t_wrf_source_out;
+      tm_time_valid_i : in  std_logic;
+      tm_tai_i        : in  std_logic_vector(39 downto 0);
+      tm_cycles_i     : in  std_logic_vector(27 downto 0);
+      regs_i          : in  t_dds_out_registers;
+      regs_o          : out t_dds_in_registers);
+  end component;
+
+  component dds_rx_path
+    generic (
+      g_acc_bits : integer);
+    port (
+      clk_sys_i       : in  std_logic;
+      clk_ref_i       : in  std_logic;
+      rst_n_sys_i     : in  std_logic;
+      rst_n_ref_i     : in  std_logic;
+      tune_o          : out std_logic_vector(17 downto 0);
+      cic_reset_o     : out std_logic;
+      acc_o           : out std_logic_vector(g_acc_bits-1 downto 0);
+      acc_load_o      : out std_logic;
+      snk_i           : in  t_wrf_sink_in;
+      snk_o           : out t_wrf_sink_out;
+      tm_time_valid_i : in  std_logic;
+      tm_tai_i        : in  std_logic_vector(39 downto 0);
+      tm_cycles_i     : in  std_logic_vector(27 downto 0);
+      regs_i          : in  t_dds_out_registers;
+      regs_o          : out t_dds_in_registers);
+  end component;
+
   component cic_1024x
     port (
       clk_i    : in  std_logic;
@@ -233,14 +275,15 @@ architecture behavioral of dds_core is
   signal synth_tune_load, synth_acc_load                                                        : std_logic;
   signal synth_y0, synth_y1, synth_y2, synth_y3                                                 : std_logic_vector(13 downto 0);
 
-  signal regs_in  : t_dds_in_registers;
-  signal regs_out : t_dds_out_registers;
+  signal regs_in, regs_in_tx, regs_in_local, regs_in_rx : t_dds_in_registers;
+  signal regs_out                           : t_dds_out_registers;
 
   signal swrst, swrst_n, rst_n_ref, rst_ref : std_logic;
 
-  signal cic_out               : std_logic_vector(77 downto 0);
-  signal cic_in, cic_out_clamp : std_logic_vector(17 downto 0);
-  signal cic_ce                : std_logic;
+  signal slave_cic_rst                     : std_logic;
+  signal cic_out                           : std_logic_vector(77 downto 0);
+  signal slave_tune, cic_in, cic_out_clamp : std_logic_vector(17 downto 0);
+  signal cic_ce                            : std_logic;
 
   function f_signed_multiply(a : std_logic_vector; b : std_logic_vector; shift : integer; output_length : integer)
     return std_logic_vector is
@@ -259,7 +302,7 @@ architecture behavioral of dds_core is
   signal adc_dvalid : std_logic;
 
   signal mdsp_out : std_logic_vector(23 downto 0);
-  signal pi_out : std_logic_vector(15 downto 0);
+  signal pi_out   : std_logic_vector(15 downto 0);
   signal mdsp_in  : std_logic_vector(23 downto 0);
 
   function f_sign_extend(x : std_logic_vector; output_length : integer) return std_logic_vector is
@@ -301,7 +344,7 @@ begin  -- behavioral
     port map (
       rst_n_i    => rst_n_i,
       clk_sys_i  => clk_sys_i,
-      wb_adr_i   => cnx_out(0).adr(5 downto 2),
+      wb_adr_i   => cnx_out(0).adr(6 downto 2),
       wb_dat_i   => cnx_out(0).dat,
       wb_dat_o   => cnx_in(0).dat,
       wb_cyc_i   => cnx_out(0).cyc,
@@ -327,8 +370,10 @@ begin  -- behavioral
       adc_sdi_o => adc_sdi_o);
 
 
-  regs_in.pd_fifo_data_i   <= adc_data;
-  regs_in.pd_fifo_wr_req_i <= adc_dvalid and not regs_out.pd_fifo_wr_full_o;
+  regs_in <= regs_in_local or regs_in_rx or regs_in_tx;
+
+  regs_in_local.pd_fifo_data_i   <= adc_data;
+  regs_in_local.pd_fifo_wr_req_i <= adc_dvalid and not regs_out.pd_fifo_wr_full_o;
 
   dac_pwdn_o <= '1';
 
@@ -369,16 +414,13 @@ begin  -- behavioral
     port map (
       clk_i    => clk_ref_i,
       en_i     => '1',
-      rst_i    => rst_ref,
+      rst_i    => slave_cic_rst,
       x_i      => cic_in,
       y_o      => cic_out,
       ce_out_o => cic_ce);
 
-  --mdsp_in <= std_logic_vector(resize(signed(unsigned(adc_data) -  to_unsigned(32767, 16)),24));
 
-  
-
-  pi_control_1: pi_control
+  pi_control_1 : pi_control
     port map (
       clk_i     => clk_ref_i,
       rst_n_i   => rst_n_ref,
@@ -388,53 +430,63 @@ begin  -- behavioral
       q_o       => pi_out,
       ki_i      => regs_out.pir_ki_o,
       kp_i      => regs_out.pir_kp_o);
-  
-  --U_The_DSP : mdsp
-  --  port map (
-  --    clk_i      => clk_ref_i,
-  --    rst_n_i    => rst_n_i,
-  --    x_req_o    => open,
-  --    x_valid_i  => adc_dvalid,
-  --    x_i        => mdsp_in,
-  --    y_valid_o  => open,
-  --    y_req_i    => '1',
-  --    y_o        => mdsp_out,
-  --    wb_cyc_i   => cnx_out(1).cyc,
-  --    wb_stb_i   => cnx_out(1).stb,
-  --    wb_we_i    => cnx_out(1).we,
-  --    wb_adr_i   => cnx_out(1).adr,
-  --    wb_dat_i   => cnx_out(1).dat,
-  --    wb_dat_o   => cnx_in(1).dat,
-  --    wb_stall_o => cnx_in(1).stall,
-  --    wb_ack_o   => cnx_in(1).ack);
+
+
+  U_Tx_Path : dds_tx_path
+    generic map (
+      g_acc_bits => 43)
+    port map (
+      clk_sys_i       => clk_sys_i,
+      clk_ref_i       => clk_ref_i,
+      rst_n_sys_i     => rst_n_i,
+      rst_n_ref_i     => rst_n_ref,
+      tune_i          => cic_in,
+      cic_ce_i        => cic_ce,
+      acc_i           => synth_acc_out,
+      src_i           => src_i,
+      src_o           => src_o,
+      tm_time_valid_i => tm_time_valid_i,
+      tm_tai_i        => tm_tai_i,
+      tm_cycles_i     => tm_cycles_i,
+      regs_i          => regs_out,
+      regs_o => regs_in_tx);
+
+  U_Rx_path : dds_rx_path
+    generic map (
+      g_acc_bits => 43)
+    port map (
+      clk_sys_i       => clk_sys_i,
+      clk_ref_i       => clk_ref_i,
+      rst_n_sys_i     => rst_n_i,
+      rst_n_ref_i     => rst_n_ref,
+      tune_o          => slave_tune,
+      cic_reset_o     => slave_cic_rst,
+      acc_o           => synth_acc_in,
+      acc_load_o      => synth_acc_load,
+      snk_i           => snk_i,
+      snk_o           => snk_o,
+      tm_time_valid_i => tm_time_valid_i,
+      tm_tai_i        => tm_tai_i,
+      tm_cycles_i     => tm_cycles_i,
+      regs_i          => regs_out,
+      regs_o          => regs_in_rx);
 
   cic_out_clamp <= cic_out(cic_out'length-1 downto cic_out'length - cic_out_clamp'length);
 
-  p_choose_tune_source : process(clk_ref_i)
+  p_choose_tune_source : process(regs_out, pi_out, slave_tune)
   begin
-    if rising_edge(clk_ref_i) then
-
-      if(regs_out.cr_test_o = '1') then
-        if(tune_empty_d0 = '1') then
-          cic_in <= (others => '0');
-        else
-          cic_in <= regs_out.tune_fifo_data_o(17 downto 0);
-        end if;
-      elsif(regs_out.cr_master_o = '1') then
-        --if(signed(mdsp_out(15 downto 0)) < -32000) then
-        --  cic_in <= std_logic_vector(to_signed(-32000, 18));
-        --elsif (signed(mdsp_out(15 downto 0)) > 32000) then
-        --  cic_in <= std_logic_vector(to_signed(32000, 18));
-        --else
-          cic_in <= pi_out(15) & pi_out(15) & pi_out;
-        --end if;
-      else
-        cic_in <= (others => '0');
-      end if;
+    --if(regs_out.cr_test_o = '1') then
+--        cic_in <= regs_out.tune_fifo_data_o(17 downto 0);
+    if(regs_out.cr_master_o = '1') then
+      cic_in <= pi_out(15) & pi_out(15) & pi_out;
+    elsif(regs_out.cr_slave_o = '1') then
+      cic_in <= slave_tune;
+    else
+      cic_in <= (others => '0');
     end if;
   end process;
 
-  regs_in.tune_fifo_rd_req_i <= not regs_out.tune_fifo_rd_empty_o and cic_ce;
+  regs_in_local.tune_fifo_rd_req_i <= not regs_out.tune_fifo_rd_empty_o and cic_ce;
 
   process(clk_ref_i)
   begin
@@ -466,7 +518,7 @@ begin  -- behavioral
         synth_tune_d1 <= synth_tune_d0;
 
         synth_tune_load <= '1';
-        synth_acc_load  <= '0';
+--        synth_acc_load  <= '0';
         dac_data_par    <= synth_y3 & synth_y2 & synth_y1 & synth_y0;
       end if;
     end if;
@@ -484,7 +536,7 @@ begin  -- behavioral
   pll_vcxo_cs_n_o     <= regs_out.gpior_pll_vcxo_cs_n_o;
   pll_vcxo_function_o <= regs_out.gpior_pll_vcxo_function_o;
 
-  regs_in.gpior_pll_vcxo_sdo_i <= pll_vcxo_sdo_i;
+  regs_in_local.gpior_pll_vcxo_sdo_i <= pll_vcxo_sdo_i;
 
   pll_sys_cs_n_o    <= regs_out.gpior_pll_sys_cs_n_o;
   pll_sys_reset_n_o <= regs_out.gpior_pll_sys_reset_n_o;
@@ -501,7 +553,7 @@ begin  -- behavioral
     end if;
   end process;
 
-  regs_in.gpior_pll_sdio_i <= pll_vcxo_sdo_i;
+  regs_in_local.gpior_pll_sdio_i <= pll_vcxo_sdo_i;
 
   pd_ce_o   <= regs_out.gpior_adf_ce_o;
   pd_clk_o  <= regs_out.gpior_adf_clk_o;
@@ -513,11 +565,13 @@ begin  -- behavioral
 --  adc_cnv_o               <= regs_out.gpior_adc_cnv_o;
 --  adc_sdi_o               <= regs_out.gpior_adc_sdi_o;
 
-  si57x_oe_o            <= '1';
-  si57x_scl_b           <= '0' when (regs_out.i2cr_scl_out_o = '0') else 'Z';
-  si57x_sda_b           <= '0' when (regs_out.i2cr_sda_out_o = '0') else 'Z';
-  regs_in.i2cr_scl_in_i <= si57x_scl_b;
-  regs_in.i2cr_sda_in_i <= si57x_sda_b;
-  
+  si57x_oe_o                  <= '1';
+  si57x_scl_b                 <= '0' when (regs_out.i2cr_scl_out_o = '0') else 'Z';
+  si57x_sda_b                 <= '0' when (regs_out.i2cr_sda_out_o = '0') else 'Z';
+  regs_in_local.i2cr_scl_in_i <= si57x_scl_b;
+  regs_in_local.i2cr_sda_in_i <= si57x_sda_b;
+
+  regs_in_local.cr_wr_time_i <= tm_time_valid_i;
+  regs_in_local.cr_wr_link_i <= tm_link_up_i;
   
 end behavioral;
