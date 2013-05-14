@@ -1,5 +1,5 @@
 
-OBJS = ad9516.o speclib/speclib.o filters.o
+OBJS = rf-lib.o rf-test.o speclib/speclib.o filters.o
 
 CFLAGS = -I../include -g -Imini_bone -Ispeclib -I.
 

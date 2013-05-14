@@ -4,12 +4,10 @@
 #include <sys/time.h>
 #include <math.h>
 
-
 #include "speclib.h"
-
 #include "regs/dds_regs.h"
-
 #include "filters.h"
+#include "rf-lib.h"
 
 void loader_low_level() {};
 
@@ -29,6 +27,11 @@ static inline uint32_t rf_readl(struct wr_rf_device *dev, uint32_t addr)
     return spec_readl (dev->card, addr + dev->base);
 }
 
+
+int gp_pos = 0;
+int pll_init = 0;
+int gp_seq = 0x7;
+
 static void gpio_set(struct wr_rf_device *dev, uint32_t pin, int value)
 {
     uint32_t g = rf_readl(dev, DDS_REG_GPIOR);
@@ -36,6 +39,32 @@ static void gpio_set(struct wr_rf_device *dev, uint32_t pin, int value)
 	rf_writel(dev, g | pin, DDS_REG_GPIOR);
     else
 	rf_writel(dev, g & ~pin, DDS_REG_GPIOR);
+
+
+    if(pll_init)
+    {
+
+    int bit;
+
+    if(pin == DDS_GPIOR_PLL_SCLK)
+	bit = 1;
+    else if(pin == DDS_GPIOR_PLL_SDIO)
+	bit = 2;
+    else if(pin == DDS_GPIOR_PLL_SYS_CS_N)
+	bit = 0;
+
+    int gp_seq_prev = gp_seq;
+    if(value)
+	gp_seq |= (1<<bit);
+    else
+	gp_seq &= ~(1<<bit);
+
+
+
+	if(gp_seq_prev!=gp_seq)
+	    printf("pll_init_seq[%d] = 3'h%x;\n", gp_pos++, gp_seq);
+    }
+
 }
 
 static int gpio_get(struct wr_rf_device *dev, uint32_t pin)
@@ -132,6 +161,8 @@ static int ad9516_init(struct wr_rf_device *dev)
     gpio_set(dev, DDS_GPIOR_PLL_SYS_RESET_N, 1);
     udelay(1000);
 
+    pll_init = 1;
+
     ad951x_write_reg(dev, DDS_GPIOR_PLL_SYS_CS_N, 0, 0x99);
     ad951x_write_reg(dev, DDS_GPIOR_PLL_SYS_CS_N, 0x232, 1);
 
@@ -160,6 +191,7 @@ static int ad9516_init(struct wr_rf_device *dev)
   ad951x_write_reg(dev, DDS_GPIOR_PLL_SYS_CS_N, 0x232, 0);
   ad951x_write_reg(dev, DDS_GPIOR_PLL_SYS_CS_N, 0x232, 1);
 
+    pll_init = 0;
   /* Wait until the PLL has locked */
     uint64_t  start_tics = get_tics();
     uint64_t lock_timeout = 1000000ULL;
@@ -181,6 +213,7 @@ static int ad9516_init(struct wr_rf_device *dev)
   ad951x_write_reg(dev, DDS_GPIOR_PLL_SYS_CS_N,  0x232, 1);
   ad951x_write_reg(dev, DDS_GPIOR_PLL_SYS_CS_N,  0x230, 0);
   ad951x_write_reg(dev, DDS_GPIOR_PLL_SYS_CS_N, 0x232, 1);
+
 
   dbg("%s: AD9516 locked.\n", __FUNCTION__);
 
@@ -275,23 +308,6 @@ void write_tune(struct wr_rf_device *dev, int tune)
     rf_writel(dev, tune, DDS_REG_TUNE_FIFO_R0);    
 }
 
-void modulation_test(struct wr_rf_device *dev)
-{
-    rf_writel(dev, 80, DDS_REG_GAIN);    /* tuning gain = 0 dB */
-    double f_test = 1e3;
-    double f_samp = 125e6/1024.0;
-    int n;
-
-    for(;;)
-    {
-	double x = 32767.0 * cos(2.0*M_PI*(double)n * f_test / f_samp);
-
-//	printf("S %d\n", (int)x);
-
-	write_tune(dev, (int) x);
-	n++;
-    }
-}
 
 void boot_mdsp(struct wr_rf_device *dev, const char *mc_file)
 {
@@ -321,76 +337,82 @@ void boot_mdsp(struct wr_rf_device *dev, const char *mc_file)
              
 }
 
-void test_pid(struct wr_rf_device *dev)
+struct wr_rf_device *rf_create(void *handle, uint32_t base_addr)
 {
-    struct fir_filter *flt_comp = fir_load("fir_compensator.dat");
-    struct iir_1st *flt_loop = lowpass_init(1000.0/(125e6/1024.0));
+    struct wr_rf_device *dev;
+    dev = malloc(sizeof(struct wr_rf_device));
 
-    double kp = 0.002;
-    double ki = 0.000001;
-    int i;
+    dev->card = handle;
+    dev->base = base_addr;
+    return dev;
+}
 
+int rf_init(struct wr_rf_device *dev, double freq, int mode, int bcid)
+{
+    dbg("SDB signature = 0x%x\n", spec_readl(dev->card, 0));
 
-    rf_writel(dev, 2000, DDS_REG_GAIN);    /* tuning gain = 0 dB */
+    rf_writel(dev, 0, DDS_REG_CR);
 
-    rf_writel(dev, DDS_CR_TEST, DDS_REG_CR);
+//    ad9516_init(dev);
+    reset_core(dev);
 
+    spec_load_lm32(dev->card, "/home/user/wrc-test.bin", 0xc0000);
 
-    int s;
+    sleep(1);
 
-    double integ = 0.0;
+    set_center_freq(dev, freq, 500e6);
+    adf4002_configure(dev, 2, 2, 4);
 
+    rf_writel(dev, 3000, DDS_REG_GAIN);   
 
-    int ki_q = (int) ((1024.0 * ki) * (double)(1<<16));
-    int kp_q = (int) ((1.0 * kp) * (double)(1<<16));
+//08:00:30:61:86:89 
+    rf_writel(dev, 0x0800, DDS_REG_MACH);
+    rf_writel(dev, 0x30618689, DDS_REG_MACL);
 
-//    printf("ki_q %d kp_q %d\n", ki_q, kp_q);
+    printf("MAC:%04x%08x\n", rf_readl(dev, DDS_REG_MACH), rf_readl(dev, DDS_REG_MACL));
 
-    #define ACC_BITS 30
-
-    int64_t acc = 0;
-    for(i=0;i<100000;i++)
-	read_adc(dev, &s , 1);
-    
-    for(;;)
+    if(mode == RF_MODE_MASTER)
     {
-        int s,err;
-        read_adc(dev, &s , 1);
 
-//	s = lowpass_process(flt_loop, s);
+        double kp = 0.05;
+        double ki = 0.0000005;
 
-	s-=32768;
-	err = s;
-//	s*=-1;
-//	integ += (double)err;
+        int ki_q = (int) ((1024.0 * ki) * (double)(1<<16));
+        int kp_q = (int) ((1.0 * kp) * (double)(1<<16));
 
-	acc += err >> 10;
-	acc &= (1<<ACC_BITS) - 1;
+//        dbg("kp_q %d ki_q %d\n", kp_q, ki_q);
+        rf_writel(dev, DDS_PIR_KI_W(ki_q) | DDS_PIR_KP_W(kp_q), DDS_REG_PIR);
 
-	if(acc & (1<<(ACC_BITS-1)))
-	    acc |= ~((1<<ACC_BITS)-1);
+        rf_writel(dev, DDS_CR_MASTER | DDS_CR_CLK_ID_W(bcid), DDS_REG_CR) ;
 
 
-	s = ((int64_t)(acc) * (int64_t) ki_q + (int64_t)err * (int64_t)kp_q) >> 16;
+//	dbg("master mode %d\n", rf_readl(dev, DDS_REG_CR) & DDS_CR_MASTER?1:0);
+	return 0;
 
-	
-	
-
-//	s = (int) (integ * ki + (double) err * kp);
-//	s = fir_process(flt_comp, s);
-
-//	integ *= 0.999999;
-//	printf("%d\n", s);
-
-	if(s < -32000) s = -32000;
-	else if (s > 32000) s = 32000;
-//	s = 30000;
-	write_tune(dev, s);
-//	printf("%d %d\n", s, err);
+    } else if (mode == RF_MODE_SLAVE) {
+        rf_writel(dev, DDS_RSTR_SW_RST, DDS_REG_RSTR);
+	udelay(10);
+        rf_writel(dev, 0, DDS_REG_RSTR);
+	rf_writel(dev, 10000, DDS_REG_DLYR);    
+        rf_writel(dev, DDS_CR_CLK_ID_W(bcid) | DDS_CR_SLAVE, DDS_REG_CR) ;
+    
 
     }
-
+    return 0;
 }
+
+
+int rf_get_counters(struct wr_rf_device *dev, struct rf_counters *cnt)
+{
+    cnt->hit = rf_readl(dev, DDS_REG_HIT_CNT) & 0xffffff;
+    cnt->miss = rf_readl(dev, DDS_REG_MISS_CNT) & 0xffffff;
+    cnt->rx = rf_readl(dev, DDS_REG_RX_CNT) & 0xffffff;
+    cnt->tx = rf_readl(dev, DDS_REG_TX_CNT) & 0xffffff;
+    return 0;
+}
+
+#if 0
+
 
 int main(int argc, char *argv[])
 {
@@ -498,3 +520,5 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+
+#endif
