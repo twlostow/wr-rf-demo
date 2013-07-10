@@ -1,0 +1,44 @@
+WR RF Distribution Demo
+Tomasz Wlostowski/CERN BE-CO-HT 2013
+
+---------------------------------------
+
+Project structure:
+
+1) rtl - HDL sources (mixed Verilog/VHDL)
+  
+dds_stage.v              single DDS generator (in our case, 125 MHz)
+dds_quad_channel.v       500 MHz version consisting of 4 "single stages", phase-shifted by 90 degrees
+dds_rx_path.vhd
+dds_tx_path.vhd          WR streamer data formatting and decoding
+dds_wb_slave.vhd
+dds_wb_slave.wb
+dds_wbgen2_pkg.vhd       Wishbone slave (wbgen2-generated)
+ad7890_if.vhd            SPI interface for the PLL ADC
+max5870_serializer.vhd   SelectIO serdes for driving the DDS DAC
+pi_control.v						 As the name says
+pll_init.v							 Hardware SPI master for initializing the on-board clock generator (AD9516)
+pll_init_data.v
+cic_1024x.vhd            1024x CIC interpolator. Matlab-generated.
+timestamp_adder.vhd
+timestamp_compare.vhd    WR timestamp arithmetic cores
+
+2) software - a C test program
+
+3) top/spec - top level for the SPEC (connects the WR core and Gennum PCI-Express core)
+
+4) syn/spec - synthesis directory
+
+5) sim - simulation models (symlink to wr-cores/sim)
+
+6) scripts - ucfgen script for pin assignment
+  
+  
+
+Synthesizing:
+
+cd syn/spec
+
+hdlmake --ise-proj
+
+open project in ISE, click Synthesize...
